@@ -133,21 +133,34 @@ In practice, Context7 doesn't just improve quality — it reduces cost further b
 
 The setup has three parts: the main model + a subagent executor + up-to-date documentation.
 
-### Step 1: Opus 4.6 as the Main Model
+**Prerequisite:** Context7 requires Node.js 20+. Check your version with `node --version`. If Node.js is not installed or is below version 20, install a current version from [nodejs.org](https://nodejs.org/) or via a package manager (e.g. `sudo apt install nodejs` for Ubuntu/Debian, `brew install node` for macOS).
 
-In `~/.claude/settings.json`:
+### Step 1: Global Claude Code Settings
+
+Add the following to `~/.claude/settings.json` (create the file if it doesn't exist):
 
 ```json
 {
-  "model": "claude-opus-4-6"
+  "model": "claude-opus-4-6",
+  "enableAllProjectMcpServers": true
 }
 ```
 
-An important nuance: Opus 4.6 doesn't appear in the Claude Code model picker dropdown — you'll only see Opus 4.7, Sonnet 4.6, and Haiku 4.5 there. But it works perfectly when set through `settings.json`. It's a "legacy" model that Anthropic hid from the UI but didn't remove from the API.
+Two settings at once:
+- `model` — sets Opus 4.6 as the main model. Opus 4.6 doesn't appear in the Claude Code model picker dropdown — you'll only see Opus 4.7, Sonnet 4.6, and Haiku 4.5 there. But it works perfectly when set through `settings.json`. It's a "legacy" model that Anthropic hid from the UI but didn't remove from the API.
+- `enableAllProjectMcpServers` — tells Claude Code to automatically connect to MCP servers defined in the project without asking for confirmation each time.
+
+If you already have a `settings.json` with other settings — add these two fields to the existing file, don't overwrite the rest.
 
 ### Step 2: code-writer Subagent on Sonnet
 
-Create the file `~/.claude/agents/code-writer.md`:
+Create the `~/.claude/agents/` directory (if it doesn't exist) and the file `~/.claude/agents/code-writer.md`:
+
+```bash
+mkdir -p ~/.claude/agents
+```
+
+Contents of `~/.claude/agents/code-writer.md`:
 
 ```markdown
 ---
@@ -166,7 +179,7 @@ This config is global across all Claude Code environments: VSCode, JetBrains, CL
 
 ### Step 3: Context7 for Current Documentation
 
-Create a `.mcp.json` file in your project root:
+Create a `.mcp.json` file **in the root of each project** where you want to use Context7:
 
 ```json
 {
@@ -178,17 +191,6 @@ Create a `.mcp.json` file in your project root:
   }
 }
 ```
-
-And add to your `~/.claude/settings.json`:
-
-```json
-{
-  "model": "claude-opus-4-6",
-  "enableAllProjectMcpServers": true
-}
-```
-
-The `enableAllProjectMcpServers` flag tells Claude Code to automatically connect to MCP servers defined in the project without asking for confirmation each time. Requires Node.js 20+.
 
 After restarting Claude Code, both Opus and Sonnet will have access to current documentation for any library via Context7. When the model encounters a library call, it pulls the latest docs before writing code — no more guessing from training data.
 
