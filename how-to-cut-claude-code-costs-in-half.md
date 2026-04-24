@@ -52,6 +52,18 @@ See the pattern? Opus wins where it needs to **independently think, navigate, an
 
 In effect, we eliminate each model's weakness and keep only its strength.
 
+## Extended Thinking vs Adaptive Thinking
+
+An important nuance that affects the choice. Opus 4.7 **does not have extended thinking** — instead it got **adaptive thinking**. This is a different mechanism: the model decides how much to "think" based on complexity, without the ability to manually set a large thinking budget.
+
+Opus 4.6 and Sonnet 4.6 have full **extended thinking** — you can allocate a large thinking budget, which produces noticeably better results on complex tasks. This is exactly why Sonnet 4.6 with extended thinking scores 76.4% on SWE-bench — significantly higher than Opus 4.7 with adaptive thinking.
+
+This is another argument for Opus 4.6 as the planner: extended thinking enables deeper task analysis before delegating execution.
+
+## Sonnet's Limitations as an Executor
+
+Sonnet 4.6 has a **64k token** output limit (vs 128k for Opus 4.6 and 4.7). For most tasks this is sufficient — 64k tokens is roughly 48 thousand words of code. But if a task requires generating very large files in a single pass, Sonnet may fall short. In that case, break the task into smaller pieces or use Opus for large generations.
+
 ## Doing the Math
 
 Take a task of 100 thousand words (input + output) and compare four configurations. The calculation uses a blended rate — a weighted price based on a typical 60% input / 40% output split.
@@ -148,6 +160,14 @@ If you don't want to set up subagents, there are simpler options:
 | **Opus 4.6 + Sonnet 4.6** | **52-59%** | **Optimal choice for daily work** |
 
 The most powerful model isn't always the most efficient. The right combination of two models delivers the same quality at half the price. An architect shouldn't lay bricks — and Opus shouldn't spend expensive tokens on what Sonnet handles just as well.
+
+## Risks and Caveats
+
+**Opus 4.6 is a legacy model.** Anthropic has already deprecated Opus 4.0 and Sonnet 4.0 with a retirement date of June 15, 2026. Opus 4.6 is still available but may be next in line for deprecation. Monitor Anthropic's updates and be ready to migrate to Opus 4.7 + Sonnet 4.6 (the subagent approach works with any main model).
+
+**Sonnet 4.6 has a 64k output limit.** Sufficient for most tasks, but for generating very large files you'll need to break the task into parts.
+
+**Adaptive thinking in Opus 4.7** may offset the token difference by solving tasks more efficiently in fewer iterations. Real savings may be lower than calculated if Opus 4.7 solves a task in 3 steps where Opus 4.6 needs 5.
 
 ---
 
