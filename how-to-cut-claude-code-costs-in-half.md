@@ -83,12 +83,12 @@ Take a task of 100 thousand words (input + output) and compare four configuratio
 |---|---|---|
 | Pure Opus 4.7 | $2.34 | — |
 | Pure Opus 4.6 | $1.73 | **-26%** |
-| Opus 4.7 + Sonnet 4.6 | $1.87 | **-20%** |
-| **Opus 4.6 + Sonnet 4.6** | **$1.38** | **-41%** |
+| Opus 4.7 + Sonnet 4.6 | $1.69 | **-28%** |
+| **Opus 4.6 + Sonnet 4.6** | **$1.39** | **-41%** |
 
 Even in the worst-case scenario — a complex task where half the work is planning — the Opus 4.6 + Sonnet 4.6 configuration saves 41%.
 
-Here's an interesting detail: Opus 4.7 + Sonnet 4.6 at 50/50 barely beats pure Opus 4.6 ($1.87 vs $1.73). The expensive 4.7 tokenizer eats up all the savings from cheap Sonnet.
+Here's an interesting detail: at 50/50, Opus 4.7 + Sonnet 4.6 ($1.69) is barely cheaper than pure Opus 4.6 ($1.73). The expensive 4.7 tokenizer eats up nearly all the savings from cheap Sonnet. Past ~53% planning, pure Opus 4.6 becomes the cheaper option even without Sonnet.
 
 ## Real-World Savings by Task Type
 
@@ -96,18 +96,42 @@ Different tasks have different "thinking vs writing" ratios:
 
 | Task Type | Planning | Execution | Savings vs Pure Opus 4.7 |
 |---|---|---|---|
-| New feature | 30-40% | 60-70% | **44-48%** |
-| Simple bug fix | 20% | 80% | **~49%** |
-| Complex bug fix | 70-80% | 20-30% | **37-41%** |
+| New feature | 30-40% | 60-70% | **44-47%** |
+| Simple bug fix | 20% | 80% | **~50%** |
+| Complex bug fix | 70-80% | 20-30% | **32-35%** |
 | Refactoring | 40-50% | 50-60% | **41-44%** |
 
 Pay attention to bug fixes. You'd think fixing a bug is "execution." But in reality, finding the bug, understanding the root cause, and choosing a fix strategy — that's all planning. The actual fix is often 5-20 lines. For complex bugs (race conditions, architectural issues) planning is 70-80% of the work.
 
 That's why the "architect + executor" pattern is most natural for bug fixes: Opus diagnoses, Sonnet treats.
 
+## Context7: Current Documentation Instead of Hallucinations
+
+There's one more piece that makes the architect + executor combo significantly stronger — Context7 MCP server.
+
+The problem: every model has a knowledge cutoff. Opus 4.6 and Sonnet 4.6 know the world as of early 2025. If you're using a library that released a new major version, changed its API, or introduced a new feature — the model doesn't know about it. It will hallucinate the old API, write code that doesn't compile, and you'll spend extra tokens on iterations and fixes.
+
+Context7 solves this. It's an MCP server that pulls up-to-date documentation for any library on the fly — React, Next.js, Prisma, Redis, Tailwind, Django, anything. When a model needs to write code using a library, it first fetches the current docs and only then writes.
+
+### How This Changes the Equation
+
+Without Context7, the workflow looks like this: Opus plans → Sonnet writes code with an outdated API → build fails → Opus re-analyzes the error → Sonnet rewrites. Two to three extra iterations — and each one costs tokens.
+
+With Context7: Opus plans and checks the current docs → passes the task to Sonnet with accurate API references → Sonnet writes working code on the first try.
+
+The effect is threefold:
+
+1. **Fewer iterations.** No back-and-forth fixing outdated API calls. On projects with modern or fast-moving dependencies, this can cut 20-40% of wasted tokens.
+2. **Better planning quality.** When Opus has access to current docs, its architectural decisions account for actual library capabilities — not what it remembers from training data.
+3. **Higher first-pass accuracy for Sonnet.** A clear task plus correct API docs means Sonnet produces working code without guessing.
+
+This is especially impactful for the Opus 4.6 + Sonnet 4.6 configuration. Extended thinking in Opus 4.6 combined with fresh documentation means deeper, more accurate planning. And Sonnet 4.6, already strong at execution with clear instructions (76.4% on SWE-bench), becomes even more reliable when those instructions include current API syntax.
+
+In practice, Context7 doesn't just improve quality — it reduces cost further by eliminating the "hallucination tax": the extra tokens spent correcting mistakes from stale knowledge.
+
 ## How to Set It Up
 
-The setup has two parts: the main model + a subagent executor.
+The setup has three parts: the main model + a subagent executor + up-to-date documentation.
 
 ### Step 1: Opus 4.6 as the Main Model
 
@@ -140,6 +164,34 @@ Now when the main Opus 4.6 session decides to delegate code writing — it passe
 
 This config is global across all Claude Code environments: VSCode, JetBrains, CLI, Desktop, and Web app.
 
+### Step 3: Context7 for Current Documentation
+
+Create a `.mcp.json` file in your project root:
+
+```json
+{
+  "mcpServers": {
+    "context7": {
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp@latest"]
+    }
+  }
+}
+```
+
+And add to your `~/.claude/settings.json`:
+
+```json
+{
+  "model": "claude-opus-4-6",
+  "enableAllProjectMcpServers": true
+}
+```
+
+The `enableAllProjectMcpServers` flag tells Claude Code to automatically connect to MCP servers defined in the project without asking for confirmation each time. Requires Node.js 20+.
+
+After restarting Claude Code, both Opus and Sonnet will have access to current documentation for any library via Context7. When the model encounters a library call, it pulls the latest docs before writing code — no more guessing from training data.
+
 ### Alternative Approaches
 
 If you don't want to set up subagents, there are simpler options:
@@ -159,7 +211,7 @@ If you don't want to set up subagents, there are simpler options:
 | Opus 4.7 + Sonnet 4.6 | 58-80% | Only makes sense for mostly execution tasks |
 | **Opus 4.6 + Sonnet 4.6** | **52-59%** | **Optimal choice for daily work** |
 
-The most powerful model isn't always the most efficient. The right combination of two models delivers the same quality at half the price. An architect shouldn't lay bricks — and Opus shouldn't spend expensive tokens on what Sonnet handles just as well.
+The most powerful model isn't always the most efficient. The right combination of two models delivers the same quality at half the price. And with Context7 providing current documentation, the savings grow further — fewer iterations fixing hallucinated APIs means fewer tokens burned. An architect shouldn't lay bricks — and Opus shouldn't spend expensive tokens on what Sonnet handles just as well.
 
 ## Risks and Caveats
 

@@ -9,13 +9,14 @@ Practical guides for optimizing Claude Code usage — save tokens, reduce costs,
 
 ## Key Takeaway
 
-The right combination of **Opus 4.6** (architect) + **Sonnet 4.6** (executor) delivers the same code quality at **half the price** compared to pure Opus 4.7.
+The right combination of **Opus 4.6** (architect) + **Context7** (docs) + **Sonnet 4.6** (executor) delivers the same code quality at **half the price** compared to pure Opus 4.7.
 
 **Step 1.** Set Opus 4.6 as the main model in `~/.claude/settings.json`:
 
 ```json
 {
-  "model": "claude-opus-4-6"
+  "model": "claude-opus-4-6",
+  "enableAllProjectMcpServers": true
 }
 ```
 
@@ -32,7 +33,20 @@ tools: Read, Edit, Write, Bash
 You are a focused code-writing agent. Implement exactly what's described in the task, following existing patterns in the codebase. Do not plan or discuss architecture — just write the code.
 ```
 
-Opus thinks, Sonnet writes — save 41-48% on your Claude Code bills.
+**Step 3.** Add Context7 for up-to-date docs. Create `.mcp.json` in your project root:
+
+```json
+{
+  "mcpServers": {
+    "context7": {
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp@latest"]
+    }
+  }
+}
+```
+
+Opus thinks, Context7 provides current docs, Sonnet writes — save 41-48% on your Claude Code bills.
 
 ## License
 
