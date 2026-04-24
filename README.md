@@ -1,5 +1,7 @@
 # Claude Code Tips
 
+![Opus + Context7 + Sonnet](cover.png)
+
 Practical guides for optimizing Claude Code usage — save tokens, reduce costs, and keep code quality high.
 
 ## Articles

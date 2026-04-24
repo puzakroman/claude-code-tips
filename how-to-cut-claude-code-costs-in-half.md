@@ -1,5 +1,7 @@
 # How to Cut Claude Code Costs in Half — Without Losing Quality
 
+![Opus + Context7 + Sonnet](cover.png)
+
 When you use Claude Code daily, the token bill adds up fast. Most developers just pick the most powerful model — Opus 4.7 — and don't think twice. But if you do the math, it turns out you can pay half as much while keeping the same code quality. Here's how.
 
 ## Same Price — Different Bill
